@@ -7,11 +7,10 @@ import (
 )
 
 type MetricsExporter struct {
-	stats *ModbusMetrics
 }
 
 func NewMetricsExporter(stats *ModbusMetrics) *MetricsExporter {
-	return &MetricsExporter{stats: stats}
+	return &MetricsExporter{}
 }
 
 func (metrics *MetricsExporter) serve() {
