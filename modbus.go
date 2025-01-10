@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/goburrow/modbus"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type input interface {
@@ -68,32 +70,64 @@ func (c *coil) read(client *modbus.Client) ([]State, error) {
 	return c.states, err
 }
 
-type Stats struct {
-	readTimeMin   uint16
-	readTimeMax   uint16
-	overtimeCount uint64
-	readCount     uint64
-	overtime      uint64
+type ModbusMetrics struct {
+	readCounter         prometheus.Counter
+	maximimReadTime     prometheus.Gauge
+	minimumReadTime     prometheus.Gauge
+	readOvertimeCounter prometheus.Counter
+
+	overtimeLimit uint16
+	maxReadTime   uint16
+	minReadTime   uint16
 }
 
-func (s *Stats) addRead(readTime uint16) {
-	s.readCount++
-	if readTime > uint16(s.overtime) {
-		s.overtimeCount++
+func NewModbusMetrics(overtimeLimit uint16) *ModbusMetrics {
+	return &ModbusMetrics{
+		readCounter: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "modbus_to_mqtt_read_count",
+			Help: "Total number of times modbus server has been read",
+		}),
+		maximimReadTime: promauto.NewGauge(prometheus.GaugeOpts{
+			Name: "modbus_to_mqtt_read_time_max",
+			Help: "Largest read time for modbus server",
+		}),
+		minimumReadTime: promauto.NewGauge(prometheus.GaugeOpts{
+			Name: "modbus_to_mqtt_read_time_min",
+			Help: "Smallest read time for modbus server",
+		}),
+		readOvertimeCounter: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "modbus_to_mqtt_read_overtime_count",
+			Help: "Total number of times modbus server read has been above the allowed time",
+		}),
+		overtimeLimit: overtimeLimit,
+		maxReadTime:   0,
+		minReadTime:   65535,
 	}
-	if readTime > s.readTimeMax {
-		s.readTimeMax = readTime
+}
+
+func (metrics *ModbusMetrics) addRead(readTime uint16) {
+	metrics.readCounter.Inc()
+
+	if readTime > uint16(metrics.overtimeLimit) {
+		metrics.readOvertimeCounter.Inc()
 	}
-	if readTime < s.readTimeMin {
-		s.readTimeMin = readTime
+
+	if readTime > metrics.maxReadTime {
+		metrics.maxReadTime = readTime
+		metrics.maximimReadTime.Set(float64(metrics.maxReadTime))
+	}
+	if readTime < metrics.minReadTime {
+		metrics.minReadTime = readTime
+		metrics.minimumReadTime.Set(float64(metrics.minReadTime))
 	}
 }
 
 type Modbus struct {
-	Stats         *Stats
+	Stats         *ModbusMetrics
 	Connected     bool
 	Blocks        []*input
 	modbusHandler *modbus.Client
+	readInterval  time.Duration
 }
 
 // can i make an interface, for transforms? Just read in coils (perhaps create more types for show)
@@ -112,7 +146,7 @@ func getInputs() []*input {
 	return inputs
 }
 
-func NewModbus(address string, port uint16) *Modbus {
+func NewModbus(address string, port uint16, readInterval time.Duration) *Modbus {
 	modbusHandler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", address, port))
 	modbusHandler.Timeout = 10 * time.Second
 	modbusHandler.SlaveId = 0xFF
@@ -124,24 +158,19 @@ func NewModbus(address string, port uint16) *Modbus {
 	}
 	client := modbus.NewClient(modbusHandler)
 	return &Modbus{
-		Stats: &Stats{
-			readTimeMin:   65535,
-			readTimeMax:   0,
-			overtimeCount: 0,
-			readCount:     0,
-			overtime:      0,
-		},
+		Stats:         NewModbusMetrics(uint16(readInterval.Milliseconds())),
 		Connected:     false,
 		Blocks:        getInputs(),
 		modbusHandler: &client,
+		readInterval:  readInterval,
 	}
 }
 
-func (m Modbus) startThread(t time.Duration, mqtt *Mqtt) {
+func (m Modbus) startThread(mqtt *Mqtt) {
 	// conf := GetConfiguration()
 	startTime := time.Now()
-	time.AfterFunc(t, func() {
-		m.startThread(t, mqtt)
+	time.AfterFunc(m.readInterval, func() {
+		m.startThread(mqtt)
 	})
 	for _, block := range m.Blocks {
 		values, err := (*block).read(m.modbusHandler)

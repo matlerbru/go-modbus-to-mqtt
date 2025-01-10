@@ -11,8 +11,13 @@ func main() {
 	mqtt.SetBaseTopic(conf.Mqtt.MainTopic)
 	mqtt.Connect()
 
-	modbus := NewModbus(conf.Modbus.Address, conf.Modbus.Port)
-	modbus.startThread(time.Duration(conf.Modbus.ScanInterval)*time.Millisecond, mqtt)
+	modbus := NewModbus(conf.Modbus.Address, conf.Modbus.Port, time.Duration(conf.Modbus.ScanInterval)*time.Millisecond)
+	modbus.startThread(mqtt)
+
+	if conf.Metrics.Enabled {
+		metricsExorter := NewMetricsExporter(modbus.Stats)
+		metricsExorter.serve()
+	}
 
 	select {}
 }

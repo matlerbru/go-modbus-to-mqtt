@@ -24,6 +24,9 @@ type config struct {
 		} `yaml:"readAddresses"`
 		ScanInterval uint16 `yaml:"scanInterval"`
 	} `yaml:"modbus"`
+	Metrics struct {
+		Enabled bool `yaml:"enabled"`
+	} `yaml:"metrics"`
 	// longPressTime uint16 `yaml:"longPressTime"`
 }
 

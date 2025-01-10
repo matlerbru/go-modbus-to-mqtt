@@ -2,7 +2,7 @@
 mqtt:
   address: "192.168.1.206"
   port: 1883
-  qos: 2 # remember to set
+  qos: 2
 
   mainTopic: modbus-to-mqtt
 
@@ -17,3 +17,6 @@ modbus:
 
   scanInterval: 80
   longPressTime: 1000
+
+metrics:
+  enabled: true
