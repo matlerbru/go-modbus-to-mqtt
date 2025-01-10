@@ -7,7 +7,7 @@ import (
 func main() {
 	conf := GetConfiguration()
 
-	mqtt := NewMqtt(conf.Mqtt.Address, conf.Mqtt.Port)
+	mqtt := NewMqtt(conf.Mqtt.Address, conf.Mqtt.Port, conf.Mqtt.Qos)
 	mqtt.SetBaseTopic(conf.Mqtt.MainTopic)
 	mqtt.Connect()
 
