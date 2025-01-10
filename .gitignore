@@ -1,0 +1,39 @@
+# Ignore the Go binary output
+/bin/
+/obj/
+
+/# Ignore dependencies
+/vendor/
+
+# Ignore Go build cache
+/.go-build/
+
+/# Ignore Go test output
+*.test
+*.out
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore editor backup files
+*~
+*.bak
+*.tmp
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore Go workspace file
+go.work
+go.work.sum
+
+# Ignore Go modules cache
+.golangci-lint-cache/
+
+# Ignore IDE specific configuration files
+/.idea/
+/.vscode/
