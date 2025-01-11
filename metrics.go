@@ -10,12 +10,13 @@ import (
 type MetricsExporter struct {
 }
 
-func NewMetricsExporter(stats *ModbusMetrics) *MetricsExporter {
+func NewMetricsExporter() *MetricsExporter {
 	return &MetricsExporter{}
 }
 
 func (metrics *MetricsExporter) serve() {
 	log.Println("INFO", "Serving metrics at localhost:9090/metrics")
 	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":9090", nil)
+	err := http.ListenAndServe(":9090", nil)
+	log.Println("ERROR", "Metrics server stopped with error: %v", err)
 }

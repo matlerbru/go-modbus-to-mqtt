@@ -1,8 +1,9 @@
-package main
+package mqtt
 
 import (
 	"fmt"
 	"log"
+	"modbus-to-mqtt/configuration"
 	"os"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 )
 
 type Mqtt struct {
+	metrics   *metrics
 	client    mqtt.Client
 	baseTopic string
 	qos       uint8
@@ -31,7 +33,7 @@ func NewMqtt(broker string, port uint16, qos uint8) *Mqtt {
 	options.OnConnect = onConnect
 	options.OnConnectionLost = onDisconnect
 
-	m := Mqtt{qos: qos}
+	m := Mqtt{metrics: newMetrics(), qos: qos}
 	m.client = mqtt.NewClient(options)
 	return &m
 }
@@ -47,7 +49,7 @@ func (m Mqtt) Connect() {
 }
 
 func (m Mqtt) Publish(topic string, message string) {
-	conf := GetConfiguration()
+	conf := configuration.GetConfiguration()
 	t := m.client.Publish(m.baseTopic+topic, conf.Mqtt.Qos, false, message)
 	go func() {
 		_ = t.Wait()
@@ -55,6 +57,7 @@ func (m Mqtt) Publish(topic string, message string) {
 			log.Println("ERROR", t.Error())
 		} else {
 			log.Println("INFO", fmt.Sprintf("Published message on topic %s, payload: '%s', qos: %d", m.baseTopic+topic, message, conf.Mqtt.Qos))
+			m.metrics.incrementPublishCounter()
 		}
 	}()
 }
