@@ -150,7 +150,6 @@ func NewModbus(address string, port uint16, readInterval time.Duration) *Modbus 
 	modbusHandler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", address, port))
 	modbusHandler.Timeout = 10 * time.Second
 	modbusHandler.SlaveId = 0xFF
-	// modbusHandler.Logger = log.New(os.Stdout, "test: ", log.LstdFlags)
 	err := modbusHandler.Connect()
 	if err != nil {
 		log.Printf("%v\n", err)
@@ -167,7 +166,7 @@ func NewModbus(address string, port uint16, readInterval time.Duration) *Modbus 
 }
 
 func (m Modbus) startThread(mqtt *Mqtt) {
-	// conf := GetConfiguration()
+
 	startTime := time.Now()
 	time.AfterFunc(m.readInterval, func() {
 		m.startThread(mqtt)
@@ -176,7 +175,7 @@ func (m Modbus) startThread(mqtt *Mqtt) {
 		values, err := (*block).read(m.modbusHandler)
 		if err != nil {
 			m.Connected = false
-			log.Printf("%v\n", err)
+			log.Println("ERROR", "%v\n", err)
 		} else {
 			m.Connected = true
 		}
@@ -185,7 +184,7 @@ func (m Modbus) startThread(mqtt *Mqtt) {
 		for _, value := range values {
 			if value.lastChanged == 0 {
 				mqtt.Publish("output",
-					fmt.Sprintf("{\"address\": %d, \"on\": %t", value.address, value.value))
+					fmt.Sprintf("{\"address\": %d, \"on\": %t}", value.address, value.value))
 			}
 		}
 	}

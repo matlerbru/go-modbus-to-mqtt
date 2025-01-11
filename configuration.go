@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -36,13 +38,16 @@ type conf struct {
 }
 
 func (conf *conf) readConfiguration(path string) {
+	log.Println("INFO", fmt.Sprintf("Reading configuration from %s", path))
 	yamlFile, err := os.ReadFile(path)
 	if err != nil {
+		log.Println("ERROR", err.Error())
 		panic(err)
 	}
 	var c config
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
+		log.Println("ERROR", err.Error())
 		panic(err)
 	}
 	conf.configuration = c
