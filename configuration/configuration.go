@@ -1,4 +1,4 @@
-package main
+package configuration
 
 import (
 	"fmt"
@@ -10,25 +10,9 @@ import (
 )
 
 type config struct {
-	Mqtt struct {
-		Address   string `yaml:"address"`
-		Port      uint16 `yaml:"port"`
-		MainTopic string `yaml:"mainTopic"`
-		Qos       uint8  `yaml:"qos"`
-	} `yaml:"mqtt"`
-	Modbus struct {
-		Address       string `yaml:"address"`
-		Port          uint16 `yaml:"port"`
-		ReadAddresses []struct {
-			AddressType string `yaml:"type"`
-			Start       uint16 `yaml:"start"`
-			Count       uint16 `yaml:"count"`
-		} `yaml:"readAddresses"`
-		ScanInterval uint16 `yaml:"scanInterval"`
-	} `yaml:"modbus"`
-	Metrics struct {
-		Enabled bool `yaml:"enabled"`
-	} `yaml:"metrics"`
+	Mqtt    mqtt    `yaml:"mqtt"`
+	Modbus  modbus  `yaml:"modbus"`
+	Metrics metrics `yaml:"metrics"`
 	// longPressTime uint16 `yaml:"longPressTime"`
 }
 
