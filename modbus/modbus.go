@@ -82,8 +82,10 @@ func (m Modbus) StartThread(mqtt *mqtt.Mqtt) {
 
 		for _, value := range values {
 			if value.lastChanged == 0 {
-				mqtt.Publish("output",
-					fmt.Sprintf("{\"address\": %d, \"on\": %t}", value.address, value.value))
+				go func() {
+					mqtt.Publish("output",
+						fmt.Sprintf("{\"address\": %d, \"on\": %t}", value.address, value.value))
+				}()
 			}
 		}
 	}
