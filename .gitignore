@@ -37,3 +37,6 @@ go.work.sum
 # Ignore IDE specific configuration files
 /.idea/
 /.vscode/
+
+# Debug
+__debug_bin*
