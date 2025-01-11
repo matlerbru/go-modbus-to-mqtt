@@ -54,7 +54,12 @@ var c = conf{
 
 func GetConfiguration() *config {
 	c.once.Do(func() {
-		c.readConfiguration("config.yaml")
+
+		configPath := os.Getenv("MODBUS_TO_MQTT_CONFIG_PATH")
+		if configPath == "" {
+			configPath = "config.yaml"
+		}
+		c.readConfiguration(configPath)
 	})
 	return &c.configuration
 }
