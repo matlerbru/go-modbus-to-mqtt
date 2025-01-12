@@ -1,28 +1,42 @@
 package modbus
 
 import (
+	"fmt"
 	"log"
+	"text/template"
 
 	"github.com/goburrow/modbus"
 )
 
 type coil struct {
-	startAddress uint16
-	count        uint16
-	states       []State
+	startAddress   uint16
+	count          uint16
+	states         []State
+	topicTemplate  *template.Template
+	reportTemplate *template.Template
 }
 
-func NewCoil(startAddress uint16, count uint16) *coil {
+func NewCoil(startAddress uint16, count uint16, topic string, reportFormat string) *coil {
 	states := make([]State, count)
-	for index, state := range states {
-		state.address = startAddress + uint16(index)
-		state.lastChanged = 0
-		state.value = false
+	for index := range states {
+		states[index].Address = startAddress + uint16(index)
 	}
+
+	reportTemplate, err := template.New("template").Parse(reportFormat)
+	if err != nil {
+		log.Fatalln("ERROR", fmt.Sprintf("Unable to parse reportFormat: %s", err.Error()))
+	}
+	topicTemplate, err := template.New("template").Parse(topic)
+	if err != nil {
+		log.Fatalln("ERROR", fmt.Sprintf("Unable to parse reportFormat: %s", err.Error()))
+	}
+
 	return &coil{
-		startAddress: startAddress,
-		count:        count,
-		states:       states,
+		startAddress:   startAddress,
+		count:          count,
+		states:         states,
+		topicTemplate:  topicTemplate,
+		reportTemplate: reportTemplate,
 	}
 }
 
@@ -46,12 +60,20 @@ func (c *coil) read(client *modbus.Client) ([]State, error) {
 	}
 	for index, value := range results {
 		state := &c.states[index]
-		if value == state.value {
-			state.lastChanged++
+		if value == state.Value {
+			state.LastChanged++
 		} else {
-			state.lastChanged = 0
+			state.LastChanged = 0
 		}
-		c.states[index].value = value
+		c.states[index].Value = value
 	}
 	return c.states, err
+}
+
+func (c coil) getReportTemplate() *template.Template {
+	return c.reportTemplate
+}
+
+func (c coil) getTopicTemplate() *template.Template {
+	return c.topicTemplate
 }

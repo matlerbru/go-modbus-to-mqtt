@@ -1,10 +1,12 @@
 package modbus
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"modbus-to-mqtt/configuration"
 	"modbus-to-mqtt/mqtt"
+	"text/template"
 	"time"
 
 	"github.com/goburrow/modbus"
@@ -12,12 +14,14 @@ import (
 
 type input interface {
 	read(*modbus.Client) ([]State, error)
+	getReportTemplate() *template.Template
+	getTopicTemplate() *template.Template
 }
 
 type State struct {
-	value       interface{}
-	lastChanged uint16
-	address     uint16
+	Value       interface{}
+	LastChanged uint16
+	Address     uint16
 }
 
 type Modbus struct {
@@ -28,16 +32,14 @@ type Modbus struct {
 	readInterval  time.Duration
 }
 
-// can i make an interface, for transforms? Just read in coils (perhaps create more types for show)
-
 func getInputs() []*input {
 	conf := configuration.GetConfiguration()
 	inputs := []*input{}
-	addresses := conf.Modbus.ReadAddresses
+	addresses := conf.Modbus.Addresses
 	for _, value := range addresses {
 		switch value.AddressType {
 		case "coil":
-			var input input = NewCoil(value.Start, value.Count)
+			var input input = NewCoil(value.Start, value.Count, value.Topic, value.ReportFormat)
 			inputs = append(inputs, &input)
 		}
 	}
@@ -78,13 +80,18 @@ func (m Modbus) StartThread(mqtt *mqtt.Mqtt) {
 		} else {
 			m.Connected = true
 		}
+
 		// use transforms here
 
+		// burde man have have en som reporterede tiden den havde været holdt nede?
+		// med mulighed for invert?
+
 		for _, value := range values {
-			if value.lastChanged == 0 {
+			if value.LastChanged == 0 {
 				go func() {
-					mqtt.Publish("output",
-						fmt.Sprintf("{\"address\": %d, \"on\": %t}", value.address, value.value))
+					topic := executeTemplate((*block).getTopicTemplate(), value)
+					report := executeTemplate((*block).getReportTemplate(), value)
+					mqtt.Publish(topic, report)
 				}()
 			}
 		}
@@ -92,4 +99,13 @@ func (m Modbus) StartThread(mqtt *mqtt.Mqtt) {
 
 	elapsed := time.Since(startTime)
 	(*m.metrics).addRead(uint16(elapsed / time.Millisecond))
+}
+
+func executeTemplate(tmpl *template.Template, data interface{}) string {
+	var buf bytes.Buffer
+	err := tmpl.Execute(&buf, data)
+	if err != nil {
+		log.Fatalln("ERROR", err.Error())
+	}
+	return buf.String()
 }
