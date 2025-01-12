@@ -46,7 +46,7 @@ func getInputs() []*input {
 
 func NewModbus(address string, port uint16, readInterval time.Duration) *Modbus {
 	modbusHandler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", address, port))
-	log.Println("INFO", fmt.Sprintf("Set modbus server address to %s:%d", address, port))
+	log.Println("INFO", fmt.Sprintf("Set modbus server address to tcp://%s:%d", address, port))
 	modbusHandler.Timeout = 10 * time.Second
 	modbusHandler.SlaveId = 0xFF
 	err := modbusHandler.Connect()

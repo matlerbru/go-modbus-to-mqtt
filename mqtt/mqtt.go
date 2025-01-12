@@ -63,8 +63,8 @@ func (m Mqtt) Publish(topic string, message string) {
 }
 
 func (m *Mqtt) SetBaseTopic(topic string) {
+	log.Println("INFO", fmt.Sprintf("Base topic set to %s", topic))
 	m.baseTopic = topic + "/"
-	log.Println("INFO", fmt.Sprintf("Base topic set to %s", m.baseTopic))
 }
 
 func (m Mqtt) IsConnected() bool {
