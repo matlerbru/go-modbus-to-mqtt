@@ -15,9 +15,11 @@ type coil struct {
 
 func NewCoil(address configuration.Address) *coil {
 	states := make([]State, address.Count)
+	templates := generateTemplates(address)
 	for index := range states {
 		states[index].Address = address.Start + uint16(index)
 		states[index].Value = false
+		states[index].templates = templates
 	}
 
 	return &coil{

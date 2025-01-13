@@ -20,6 +20,7 @@ type State struct {
 	LastChanged uint16
 	Address     uint16
 	Changed     bool
+	templates   *templates
 }
 
 type Modbus struct {
@@ -81,7 +82,7 @@ func (modbus Modbus) StartThread(mqtt *mqtt.Mqtt) {
 
 		for _, value := range values {
 			go func() {
-				report(value, (*block).getConfiguration(), *mqtt)
+				report(value, *mqtt)
 			}()
 		}
 	}
