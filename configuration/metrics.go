@@ -1,5 +1,5 @@
 package configuration
 
-type metrics struct {
+type Metrics struct {
 	Enabled bool `yaml:"enabled"`
 }

@@ -1,27 +1,25 @@
 package modbus
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"modbus-to-mqtt/configuration"
 	"modbus-to-mqtt/mqtt"
-	"text/template"
 	"time"
 
 	"github.com/goburrow/modbus"
 )
 
 type input interface {
-	read(*modbus.Client) ([]State, error)
-	getReportTemplate() *template.Template
-	getTopicTemplate() *template.Template
+	read(*modbus.Client, time.Duration) ([]State, error)
+	getConfiguration() configuration.Address
 }
 
 type State struct {
 	Value       interface{}
 	LastChanged uint16
 	Address     uint16
+	Changed     bool
 }
 
 type Modbus struct {
@@ -39,7 +37,7 @@ func getInputs() []*input {
 	for _, value := range addresses {
 		switch value.AddressType {
 		case "coil":
-			var input input = NewCoil(value.Start, value.Count, value.Topic, value.ReportFormat)
+			var input input = NewCoil(value)
 			inputs = append(inputs, &input)
 		}
 	}
@@ -67,45 +65,27 @@ func NewModbus(address string, port uint16, readInterval time.Duration) *Modbus 
 	}
 }
 
-func (m Modbus) StartThread(mqtt *mqtt.Mqtt) {
+func (modbus Modbus) StartThread(mqtt *mqtt.Mqtt) {
 	startTime := time.Now()
-	time.AfterFunc(m.readInterval, func() {
-		m.StartThread(mqtt)
+	time.AfterFunc(modbus.readInterval, func() {
+		modbus.StartThread(mqtt)
 	})
-	for _, block := range m.Blocks {
-		values, err := (*block).read(m.modbusHandler)
+	for _, block := range modbus.Blocks {
+		values, err := (*block).read(modbus.modbusHandler, modbus.readInterval)
 		if err != nil {
-			m.Connected = false
+			modbus.Connected = false
 			log.Println("ERROR", "%v\n", err)
 		} else {
-			m.Connected = true
+			modbus.Connected = true
 		}
 
-		// use transforms here
-
-		// burde man have have en som reporterede tiden den havde været holdt nede?
-		// med mulighed for invert?
-
 		for _, value := range values {
-			if value.LastChanged == 0 {
-				go func() {
-					topic := executeTemplate((*block).getTopicTemplate(), value)
-					report := executeTemplate((*block).getReportTemplate(), value)
-					mqtt.Publish(topic, report)
-				}()
-			}
+			go func() {
+				report(value, (*block).getConfiguration(), *mqtt)
+			}()
 		}
 	}
 
 	elapsed := time.Since(startTime)
-	(*m.metrics).addRead(uint16(elapsed / time.Millisecond))
-}
-
-func executeTemplate(tmpl *template.Template, data interface{}) string {
-	var buf bytes.Buffer
-	err := tmpl.Execute(&buf, data)
-	if err != nil {
-		log.Fatalln("ERROR", err.Error())
-	}
-	return buf.String()
+	(*modbus.metrics).addRead(uint16(elapsed / time.Millisecond))
 }

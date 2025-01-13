@@ -1,6 +1,6 @@
 package configuration
 
-type mqtt struct {
+type Mqtt struct {
 	Address   string `yaml:"address"`
 	Port      uint16 `yaml:"port"`
 	MainTopic string `yaml:"mainTopic"`

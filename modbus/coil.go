@@ -1,42 +1,28 @@
 package modbus
 
 import (
-	"fmt"
 	"log"
-	"text/template"
+	"modbus-to-mqtt/configuration"
+	"time"
 
 	"github.com/goburrow/modbus"
 )
 
 type coil struct {
-	startAddress   uint16
-	count          uint16
-	states         []State
-	topicTemplate  *template.Template
-	reportTemplate *template.Template
+	states        []State
+	configuration configuration.Address
 }
 
-func NewCoil(startAddress uint16, count uint16, topic string, reportFormat string) *coil {
-	states := make([]State, count)
+func NewCoil(address configuration.Address) *coil {
+	states := make([]State, address.Count)
 	for index := range states {
-		states[index].Address = startAddress + uint16(index)
-	}
-
-	reportTemplate, err := template.New("template").Parse(reportFormat)
-	if err != nil {
-		log.Fatalln("ERROR", fmt.Sprintf("Unable to parse reportFormat: %s", err.Error()))
-	}
-	topicTemplate, err := template.New("template").Parse(topic)
-	if err != nil {
-		log.Fatalln("ERROR", fmt.Sprintf("Unable to parse reportFormat: %s", err.Error()))
+		states[index].Address = address.Start + uint16(index)
+		states[index].Value = false
 	}
 
 	return &coil{
-		startAddress:   startAddress,
-		count:          count,
-		states:         states,
-		topicTemplate:  topicTemplate,
-		reportTemplate: reportTemplate,
+		states:        states,
+		configuration: address,
 	}
 }
 
@@ -52,28 +38,27 @@ func bytesToBoolArray(bytes []byte) []bool {
 	return res
 }
 
-func (c *coil) read(client *modbus.Client) ([]State, error) {
-	res, err := (*client).ReadCoils(c.startAddress, c.count)
+func (coil *coil) read(client *modbus.Client, interval time.Duration) ([]State, error) {
+	res, err := (*client).ReadCoils(coil.configuration.Start, coil.configuration.Count)
 	results := bytesToBoolArray(res)
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
 	for index, value := range results {
-		state := &c.states[index]
-		if value == state.Value {
-			state.LastChanged++
-		} else {
+		state := &coil.states[index]
+
+		if state.Changed {
 			state.LastChanged = 0
+		} else {
+			state.LastChanged += uint16(interval.Milliseconds())
 		}
-		c.states[index].Value = value
+
+		state.Changed = value != state.Value
+		coil.states[index].Value = value
 	}
-	return c.states, err
+	return coil.states, err
 }
 
-func (c coil) getReportTemplate() *template.Template {
-	return c.reportTemplate
-}
-
-func (c coil) getTopicTemplate() *template.Template {
-	return c.topicTemplate
+func (coil coil) getConfiguration() configuration.Address {
+	return coil.configuration
 }

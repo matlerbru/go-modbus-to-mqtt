@@ -15,10 +15,13 @@ modbus:
     start: 0
     count: 32
     topic: 'output'
-    reportFormat: '{"address": {{.Address}}, "on": {{.Value}}}'
+    report: 
+    - enabled: '{{and (gt .LastChanged 999) (not .Value) .Changed }}'
+      format: '{"address": {{.Address}}, "press": "long"}'
+    - enabled: '{{and (lt .LastChanged 1000) (not .Value) .Changed }}'
+      format: '{"address": {{.Address}}, "press": "short"}'
 
   scanInterval: 80
-  longPressTime: 1000
 
 metrics:
   enabled: true

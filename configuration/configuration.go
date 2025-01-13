@@ -10,9 +10,9 @@ import (
 )
 
 type config struct {
-	Mqtt    mqtt    `yaml:"mqtt"`
-	Modbus  modbus  `yaml:"modbus"`
-	Metrics metrics `yaml:"metrics"`
+	Mqtt    Mqtt    `yaml:"mqtt"`
+	Modbus  Modbus  `yaml:"modbus"`
+	Metrics Metrics `yaml:"metrics"`
 	// longPressTime uint16 `yaml:"longPressTime"`
 }
 
