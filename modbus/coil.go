@@ -8,24 +8,42 @@ import (
 	"github.com/goburrow/modbus"
 )
 
-type coil struct {
-	states        []State
-	configuration configuration.Address
+type coilBlock struct {
+	coils        []input
+	startAddress uint16
+	AddressCount uint16
 }
 
-func NewCoil(address configuration.Address) *coil {
-	states := make([]State, address.Count)
-	templates := generateTemplates(address)
+func NewCoilBlock(block *configuration.Block) coilBlock {
+
+	conf := configuration.GetConfiguration()
+	states := make([]State, block.Count)
+
 	for index := range states {
-		states[index].Address = address.Start + uint16(index)
 		states[index].Value = false
-		states[index].templates = templates
 	}
 
-	return &coil{
-		states:        states,
-		configuration: address,
+	var coils []input
+
+	for index, state := range states {
+		coils = append(coils, input{
+			State:             state,
+			Address:           block.Start + uint16(index),
+			ScanInterval:      conf.Modbus.ScanInterval,
+			BlockStartAddress: block.Start,
+			BlockAddressCount: block.Count,
+			BlockType:         block.Type,
+
+			templates: generateTemplates(block),
+		})
 	}
+
+	return coilBlock{
+		coils:        coils,
+		startAddress: block.Start,
+		AddressCount: block.Count,
+	}
+
 }
 
 func bytesToBoolArray(bytes []byte) []bool {
@@ -40,14 +58,22 @@ func bytesToBoolArray(bytes []byte) []bool {
 	return res
 }
 
-func (coil *coil) read(client *modbus.Client, interval time.Duration) ([]State, error) {
-	res, err := (*client).ReadCoils(coil.configuration.Start, coil.configuration.Count)
+func (coilBlock coilBlock) read(client *modbus.Client, interval time.Duration) ([]input, error) {
+
+	res, err := (*client).ReadCoils(coilBlock.startAddress, coilBlock.AddressCount)
 	results := bytesToBoolArray(res)
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
+
+	count := coilBlock.AddressCount
 	for index, value := range results {
-		state := &coil.states[index]
+
+		if uint16(index) == count {
+			break
+		}
+
+		state := &coilBlock.coils[index].State
 
 		if state.Changed {
 			state.LastChanged = 0
@@ -56,11 +82,7 @@ func (coil *coil) read(client *modbus.Client, interval time.Duration) ([]State, 
 		}
 
 		state.Changed = value != state.Value
-		coil.states[index].Value = value
+		coilBlock.coils[index].State.Value = value
 	}
-	return coil.states, err
-}
-
-func (coil coil) getConfiguration() configuration.Address {
-	return coil.configuration
+	return coilBlock.coils, err
 }

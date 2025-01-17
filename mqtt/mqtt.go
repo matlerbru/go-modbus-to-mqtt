@@ -56,7 +56,12 @@ func (m Mqtt) Publish(topic string, message string) {
 		if t.Error() != nil {
 			log.Println("ERROR", t.Error())
 		} else {
-			log.Println("INFO", fmt.Sprintf("Published message on topic %s, payload: '%s', qos: %d", m.baseTopic+topic, message, conf.Mqtt.Qos))
+			log.Println("INFO", fmt.Sprintf(
+				"Published message on topic %s, payload: '%s', qos: %d",
+				m.baseTopic+topic,
+				message,
+				conf.Mqtt.Qos,
+			))
 			m.metrics.incrementPublishCounter()
 		}
 	}()

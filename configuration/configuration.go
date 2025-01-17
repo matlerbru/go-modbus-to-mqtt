@@ -9,15 +9,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type config struct {
+type Config struct {
 	Mqtt    Mqtt    `yaml:"mqtt"`
 	Modbus  Modbus  `yaml:"modbus"`
 	Metrics Metrics `yaml:"metrics"`
-	// longPressTime uint16 `yaml:"longPressTime"`
 }
 
 type conf struct {
-	configuration config
+	configuration Config
 	once          sync.Once
 }
 
@@ -28,7 +27,7 @@ func (conf *conf) readConfiguration(path string) {
 		log.Println("ERROR", err.Error())
 		panic(err)
 	}
-	var c config
+	var c Config
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
 		log.Println("ERROR", err.Error())
@@ -41,7 +40,7 @@ var c = conf{
 	once: sync.Once{},
 }
 
-func GetConfiguration() *config {
+func GetConfiguration() *Config {
 	c.once.Do(func() {
 
 		configPath := os.Getenv("MODBUS_TO_MQTT_CONFIG_PATH")

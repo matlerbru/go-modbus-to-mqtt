@@ -10,17 +10,19 @@ modbus:
   address: "192.168.1.12"
   port: 502
 
-  addresses:
+  blocks:
   - type: coil
     start: 0
-    count: 32
-    topic: 'output'
+    count: 1
+    topic: 'di/{{.Address}}'
+    
     report: 
-    - enabled: '{{and (gt .LastChanged 999) (not .Value) .Changed }}'
-      format: '{"address": {{.Address}}, "press": "long"}'
-    - enabled: '{{and (lt .LastChanged 1000) (not .Value) .Changed }}'
-      format: '{"address": {{.Address}}, "press": "short"}'
-
+    - sendOn: '{{and (gt .State.LastChanged 999) (not .State.Value)}}'
+      format: long
+      onlyOnChange: true
+    - sendOn: '{{and (lt .State.LastChanged 1000) (not .State.Value)}}'
+      format: short
+      onlyOnChange: true
   scanInterval: 80
 
 metrics:

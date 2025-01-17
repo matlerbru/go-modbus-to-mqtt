@@ -10,35 +10,48 @@ import (
 	"github.com/goburrow/modbus"
 )
 
-type input interface {
-	read(*modbus.Client, time.Duration) ([]State, error)
-	getConfiguration() configuration.Address
+type block interface {
+	read(*modbus.Client, time.Duration) ([]input, error)
+}
+
+type input struct {
+	State             State
+	Address           uint16
+	ScanInterval      uint16
+	BlockStartAddress uint16
+	BlockAddressCount uint16
+	BlockType         string
+
+	templates *templates
+}
+
+func (input input) getTemplates() templates {
+	return *input.templates
 }
 
 type State struct {
-	Value       interface{}
+	Value       any
 	LastChanged uint16
-	Address     uint16
 	Changed     bool
-	templates   *templates
 }
 
 type Modbus struct {
 	metrics       *metrics
 	Connected     bool
-	Blocks        []*input
+	Blocks        []*block
 	modbusHandler *modbus.Client
 	readInterval  time.Duration
 }
 
-func getInputs() []*input {
+func getInputs() []*block {
 	conf := configuration.GetConfiguration()
-	inputs := []*input{}
+	inputs := []*block{}
 	addresses := conf.Modbus.Addresses
-	for _, value := range addresses {
-		switch value.AddressType {
+	for index, value := range addresses {
+		switch value.Type {
 		case "coil":
-			var input input = NewCoil(value)
+			address := &addresses[index]
+			var input block = NewCoilBlock(address)
 			inputs = append(inputs, &input)
 		}
 	}
@@ -46,8 +59,12 @@ func getInputs() []*input {
 }
 
 func NewModbus(address string, port uint16, readInterval time.Duration) *Modbus {
-	modbusHandler := modbus.NewTCPClientHandler(fmt.Sprintf("%s:%d", address, port))
-	log.Println("INFO", fmt.Sprintf("Set modbus server address to tcp://%s:%d", address, port))
+	modbusHandler := modbus.NewTCPClientHandler(
+		fmt.Sprintf("%s:%d", address, port),
+	)
+	log.Println("INFO", fmt.Sprintf(
+		"Set modbus server address to tcp://%s:%d", address, port),
+	)
 	modbusHandler.Timeout = 10 * time.Second
 	modbusHandler.SlaveId = 0xFF
 	err := modbusHandler.Connect()
