@@ -1,0 +1,23 @@
+name: Build docker image
+run-name: Build application
+on: [push]
+
+  Release-image:
+    runs-on: ubuntu-latest
+    needs: ["Build-docker-images"]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: 'Login to GitHub Container Registry'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.TOKEN}}
+
+      - name: 'Build Inventory Image'
+        run: |
+          docker build -t ghcr.io/${{github.actor}}/go-modbus-to-mqtt:latest --target ${{ github.workspace }}/build
+          docker push ghcr.io/${{github.actor}}/go-modbus-to-mqtt:latest
