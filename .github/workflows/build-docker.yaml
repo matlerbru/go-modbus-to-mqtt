@@ -2,6 +2,7 @@ name: Build docker image
 run-name: Build application
 on: [push]
 
+jobs:
   Release-image:
     runs-on: ubuntu-latest
     needs: ["Build-docker-images"]
