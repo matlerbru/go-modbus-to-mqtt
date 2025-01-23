@@ -11,6 +11,6 @@ FROM gcr.io/distroless/static:nonroot
 
 WORKDIR /
 COPY --from=builder /app/modbus-to-mqtt/modbus-to-mqtt /modbus-to-mqtt
-COPY config.yaml /config.yaml
 USER nonroot:nonroot
 ENTRYPOINT ["/modbus-to-mqtt"]
+                                                                                                                         
