@@ -7,6 +7,8 @@ import (
 
 type metrics struct {
 	readCounter         prometheus.Counter
+	readCounterTotal    prometheus.Gauge
+	readTime            prometheus.Gauge
 	maximimReadTime     prometheus.Gauge
 	minimumReadTime     prometheus.Gauge
 	readOvertimeCounter prometheus.Counter
@@ -20,7 +22,15 @@ func newMetrics(overtimeLimit uint16) *metrics {
 	return &metrics{
 		readCounter: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "modbus_to_mqtt_modbus_read_count",
-			Help: "Total number of times modbus server has been read",
+			Help: "Times modbus server is been read",
+		}),
+		readCounterTotal: promauto.NewGauge(prometheus.GaugeOpts{
+			Name: "modbus_to_mqtt_modbus_read_count_total",
+			Help: "Total times modbus server has been read",
+		}),
+		readTime: promauto.NewGauge(prometheus.GaugeOpts{
+			Name: "modbus_to_mqtt_modbus_read_time",
+			Help: "Read time for modbus server",
 		}),
 		maximimReadTime: promauto.NewGauge(prometheus.GaugeOpts{
 			Name: "modbus_to_mqtt_modbus_read_time_max",
@@ -30,7 +40,7 @@ func newMetrics(overtimeLimit uint16) *metrics {
 			Name: "modbus_to_mqtt_modbus_read_time_min",
 			Help: "Smallest read time for modbus server",
 		}),
-		readOvertimeCounter: promauto.NewCounter(prometheus.CounterOpts{
+		readOvertimeCounter: promauto.NewGauge(prometheus.GaugeOpts{
 			Name: "modbus_to_mqtt_modbus_read_overtime_count",
 			Help: "Total number of times modbus server read has been above the allowed time",
 		}),
@@ -42,6 +52,8 @@ func newMetrics(overtimeLimit uint16) *metrics {
 
 func (metrics *metrics) addRead(readTime uint16) {
 	metrics.readCounter.Inc()
+	metrics.readCounterTotal.Inc()
+	metrics.readTime.Set(float64(readTime))
 
 	if readTime > uint16(metrics.overtimeLimit) {
 		metrics.readOvertimeCounter.Inc()

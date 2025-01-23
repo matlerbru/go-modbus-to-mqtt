@@ -11,7 +11,7 @@ type metrics struct {
 
 func newMetrics() *metrics {
 	return &metrics{
-		publishCounter: promauto.NewCounter(prometheus.CounterOpts{
+		publishCounter: promauto.NewGauge(prometheus.GaugeOpts{
 			Name: "modbus_to_mqtt_mqtt_publish_count",
 			Help: "Total number of messages published by mqtt",
 		}),
