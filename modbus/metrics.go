@@ -1,6 +1,8 @@
 package modbus
 
 import (
+	"log"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -44,14 +46,11 @@ func (metrics *metrics) addRead(readTime uint16) {
 
 	if readTime > uint16(metrics.overtimeLimit) {
 		metrics.readOvertimeCounter.Inc()
+		log.Println("WARNING", "Read time is above the allowed limit, read time:", readTime)
 	}
 
 	if readTime > metrics.maxReadTime {
 		metrics.maxReadTime = readTime
 		metrics.maximimReadTime.Set(float64(metrics.maxReadTime))
-	}
-	if readTime < metrics.minReadTime {
-		metrics.minReadTime = readTime
-		metrics.minimumReadTime.Set(float64(metrics.minReadTime))
 	}
 }
