@@ -69,8 +69,26 @@ type templateable struct {
 	enabled  bool
 }
 
+func templateFunctionAdd(a, b int) int {
+	return a + b
+}
+
+func templateFunctionSub(a, b int) int {
+	return a - b
+}
+
+func templateFunctionMod(a, b int) int {
+	return a % b
+}
+
 func NewTemplateable(text string) templateable {
-	templ, err := template.New("").Parse(text)
+	templ, err := template.New("").Funcs(
+		template.FuncMap{
+			"add": templateFunctionAdd,
+			"sub": templateFunctionSub,
+			"mod": templateFunctionMod,
+		},
+	).Parse(text)
 	if err != nil {
 		log.Fatalln("ERROR", err.Error())
 	}
