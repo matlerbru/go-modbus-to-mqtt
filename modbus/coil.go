@@ -21,6 +21,7 @@ func NewCoilBlock(block *configuration.Block) coilBlock {
 
 	for index := range states {
 		states[index].Value = false
+		states[index].LastChanged = 0
 	}
 
 	var coils []input
