@@ -77,7 +77,10 @@ func templateFunctionSub(a, b int) int {
 	return a - b
 }
 
-func templateFunctionMod(a, b int) int {
+func templateFunctionMod(a, b uint16) uint16 {
+	if b == 0 {
+		return 0
+	}
 	return a % b
 }
 
