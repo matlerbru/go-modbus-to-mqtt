@@ -12,7 +12,7 @@ func main() {
 
 	mqtt := mqtt.NewMqtt(conf.Mqtt.Address, conf.Mqtt.Port, conf.Mqtt.Qos)
 	mqtt.SetBaseTopic(conf.Mqtt.MainTopic)
-	mqtt.Connect()
+	mqtt.Connect(12)
 
 	modbus := modbus.NewModbus(
 		conf.Modbus.Address,
