@@ -7,7 +7,6 @@ import (
 	"modbus-to-mqtt/configuration"
 	"modbus-to-mqtt/mqtt"
 	"time"
-	"errors"
 
 	"github.com/goburrow/modbus"
 )
@@ -40,7 +39,7 @@ type State struct {
 type Modbus struct {
 	metrics       *metrics
 	Connected     bool
-	connecting    bool
+	running       bool
 	Blocks        []*block
 	client 		  *modbus.Client
 	modbusHandler *modbus.TCPClientHandler
@@ -80,7 +79,7 @@ func NewModbus(address string, port uint16, readInterval time.Duration) *Modbus 
 	return &Modbus{
 		metrics:       metrics,
 		Connected:     false,
-		connecting:    false,
+		running:       false,
 		Blocks:        getInputs(),
 		client: &client,
 		modbusHandler: modbusHandler,
@@ -88,16 +87,11 @@ func NewModbus(address string, port uint16, readInterval time.Duration) *Modbus 
 	}
 }
 
-func (modbus *Modbus) Connect(retries int) error {
-
-	if modbus.connecting {
-		return errors.New("Already connecting to modbus server")
-	}
-	modbus.connecting = true
+func (modbus *Modbus) Connect(retries int) {
 
 	if modbus.Connected {
 		log.Println("INFO", "Already connected to modbus server")
-		return nil
+		return
 	}
 
 	retry := 0
@@ -107,8 +101,7 @@ func (modbus *Modbus) Connect(retries int) error {
 			modbus.Connected = true
 			modbus.metrics.setConnected(1)
 			log.Println("INFO", "Connected to modbus server")
-			modbus.connecting = false
-			return nil
+			return
 		}
 		retry++
 		log.Println("ERROR", fmt.Sprintf("Failed to connect to modbus client, retrying (%d)", retry))
@@ -121,17 +114,25 @@ func (modbus *Modbus) Connect(retries int) error {
 }
 
 func (modbus *Modbus) StartThread(mqtt *mqtt.Mqtt) {
-	if !modbus.Connected {
-		err := modbus.Connect(0)
-		if err != nil {
-			return
+
+	for {
+		if !modbus.running {
+			break
 		}
+		time.Sleep(1 * time.Second)
 	}
-	startTime := time.Now()
+	modbus.running = true
+
 
 	time.AfterFunc(modbus.readInterval, func() {
 		modbus.StartThread(mqtt)
 	})
+
+	if !modbus.Connected {
+		modbus.Connect(0)
+	}
+
+	startTime := time.Now()
 
 	for _, block := range modbus.Blocks {
 		values, err := (*block).read(modbus.client, modbus.readInterval)
@@ -140,6 +141,7 @@ func (modbus *Modbus) StartThread(mqtt *mqtt.Mqtt) {
 			log.Println("ERROR", fmt.Sprintf("Failed to read from modbus block: %s", err.Error()))
 			modbus.metrics.setConnected(0)
 			modbus.Connected = false
+			modbus.running = false
 			return
 		}
 
@@ -152,4 +154,5 @@ func (modbus *Modbus) StartThread(mqtt *mqtt.Mqtt) {
 
 	elapsed := time.Since(startTime)
 	(*modbus.metrics).addRead(uint16(elapsed / time.Millisecond))
+	modbus.running = false
 }
