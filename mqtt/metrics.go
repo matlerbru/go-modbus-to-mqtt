@@ -1,15 +1,13 @@
 package mqtt
 
 import (
-	"log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"log"
 )
 
-
-
 type metrics struct {
-	connected prometheus.Gauge
+	connected      prometheus.Gauge
 	publishCounter prometheus.Counter
 }
 
@@ -33,7 +31,6 @@ func (metrics *metrics) setConnected(value float64) {
 	}
 	metrics.connected.Set(value)
 }
-
 
 func (metrics *metrics) incrementPublishCounter() {
 	metrics.publishCounter.Inc()

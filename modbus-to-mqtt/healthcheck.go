@@ -17,7 +17,7 @@ func NewHealthCheck(callback func() error) *HealthCheck {
 
 func (HealthCheck *HealthCheck) serve() {
 	log.Println("INFO", "Serving health at localhost:8080/health")
-    http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		if HealthCheck.callback() != nil {
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = w.Write([]byte("Error"))
@@ -25,10 +25,7 @@ func (HealthCheck *HealthCheck) serve() {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("OK"))
 		}
-    })
+	})
 	err := http.ListenAndServe(":8080", nil)
 	log.Println("ERROR", "HealthCheck server stopped with error: %v", err)
 }
-
-
-

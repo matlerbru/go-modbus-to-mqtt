@@ -2,10 +2,10 @@ package modbus
 
 import (
 	"fmt"
-	"os"
 	"log"
 	"modbus-to-mqtt/configuration"
 	"modbus-to-mqtt/mqtt"
+	"os"
 	"time"
 
 	"github.com/goburrow/modbus"
@@ -41,7 +41,7 @@ type Modbus struct {
 	Connected     bool
 	running       bool
 	Blocks        []*block
-	client 		  *modbus.Client
+	client        *modbus.Client
 	modbusHandler *modbus.TCPClientHandler
 	readInterval  time.Duration
 }
@@ -81,7 +81,7 @@ func NewModbus(address string, port uint16, readInterval time.Duration) *Modbus 
 		Connected:     false,
 		running:       false,
 		Blocks:        getInputs(),
-		client: &client,
+		client:        &client,
 		modbusHandler: modbusHandler,
 		readInterval:  readInterval,
 	}
@@ -122,7 +122,6 @@ func (modbus *Modbus) StartThread(mqtt *mqtt.Mqtt) {
 		time.Sleep(1 * time.Second)
 	}
 	modbus.running = true
-
 
 	time.AfterFunc(modbus.readInterval, func() {
 		modbus.StartThread(mqtt)

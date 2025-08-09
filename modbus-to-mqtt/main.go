@@ -1,11 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"modbus-to-mqtt/configuration"
 	"modbus-to-mqtt/modbus"
 	"modbus-to-mqtt/mqtt"
 	"time"
-	"fmt"
 )
 
 func main() {
