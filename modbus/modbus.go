@@ -156,3 +156,7 @@ func (modbus *Modbus) StartThread(mqtt *mqtt.Mqtt) {
 	(*modbus.metrics).addRead(uint16(elapsed / time.Millisecond))
 	modbus.running = false
 }
+
+func (modbus Modbus) IsConnected() bool {
+	return modbus.Connected
+}
