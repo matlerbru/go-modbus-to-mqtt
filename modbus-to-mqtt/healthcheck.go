@@ -21,10 +21,10 @@ func (HealthCheck *HealthCheck) serve() {
 		if HealthCheck.callback() != nil {
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = w.Write([]byte("Error"))
-		} else {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("OK"))
+			return
 		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("OK"))
 	})
 	err := http.ListenAndServe(":8080", nil)
 	log.Println("ERROR", "HealthCheck server stopped with error: %v", err)
