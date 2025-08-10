@@ -15,6 +15,7 @@ type Mqtt struct {
 	client    mqtt.Client
 	baseTopic string
 	qos       uint8
+	connected bool
 }
 
 var instances []*Mqtt
@@ -25,6 +26,7 @@ func onConnect(client mqtt.Client) {
 	for _, instance := range instances {
 		if instance.client == client {
 			instance.metrics.setConnected(1)
+			instance.connected = true
 			break
 		}
 	}
@@ -36,6 +38,7 @@ func onDisconnect(client mqtt.Client, err error) {
 	for _, instance := range instances {
 		if instance.client == client {
 			instance.metrics.setConnected(0)
+			instance.connected = false
 			instance.Connect(0)
 			break
 		}
@@ -49,7 +52,7 @@ func NewMqtt(broker string, port uint16, qos uint8) *Mqtt {
 	options.OnConnect = onConnect
 	options.OnConnectionLost = onDisconnect
 
-	m := Mqtt{metrics: newMetrics(), qos: qos}
+	m := Mqtt{metrics: newMetrics(), qos: qos, connected: false}
 	m.client = mqtt.NewClient(options)
 	m.metrics.setConnected(0)
 
@@ -103,5 +106,5 @@ func (m *Mqtt) SetBaseTopic(topic string) {
 }
 
 func (m Mqtt) IsConnected() bool {
-	return m.client.IsConnected()
+	return m.connected
 }

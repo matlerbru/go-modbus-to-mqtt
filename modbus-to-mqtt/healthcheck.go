@@ -3,29 +3,50 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"modbus-to-mqtt/modbus"
+	"modbus-to-mqtt/mqtt"
 )
 
 type HealthCheck struct {
-	callback func() error
+	mqtt   *mqtt.Mqtt
+	modbus *modbus.Modbus
 }
 
-func NewHealthCheck(callback func() error) *HealthCheck {
+func NewHealthCheck(mqtt *mqtt.Mqtt, modbus *modbus.Modbus) *HealthCheck {
 	return &HealthCheck{
-		callback: callback,
+		mqtt:   mqtt,
+		modbus: modbus,
 	}
 }
 
-func (HealthCheck *HealthCheck) serve() {
-	log.Println("INFO", "Serving health at localhost:8080/health")
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		if HealthCheck.callback() != nil {
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte("Error"))
-		} else {
+func (healthCheck *HealthCheck) check() bool {
+	if !healthCheck.mqtt.IsConnected() {
+		return false
+	}
+	if !healthCheck.modbus.IsConnected() {
+		return false
+	}
+	return true
+}
+
+func (healthCheck *HealthCheck) serve() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Cache-Control", "no-store")
+
+		if healthCheck.check() {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("OK"))
+			return
 		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("UNHEALTHY"))
 	})
-	err := http.ListenAndServe(":8080", nil)
-	log.Println("ERROR", "HealthCheck server stopped with error: %v", err)
+
+	log.Println("INFO", "Serving health at :8080/health")
+	if err := http.ListenAndServe(":8080", mux); err != nil {
+		log.Printf("ERROR HealthCheck server stopped with error: %v", err)
+	}
 }

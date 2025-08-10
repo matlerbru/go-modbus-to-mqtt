@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"modbus-to-mqtt/configuration"
 	"modbus-to-mqtt/modbus"
 	"modbus-to-mqtt/mqtt"
@@ -30,15 +29,7 @@ func main() {
 	modbus.Connect(12)
 	modbus.StartThread(mqtt)
 
-	healthCheck := NewHealthCheck(func() error {
-		if !mqtt.IsConnected() {
-			return fmt.Errorf("MQTT client is not connected")
-		}
-		if !modbus.IsConnected() {
-			return fmt.Errorf("Modbus client is not connected")
-		}
-		return nil
-	})
+	healthCheck := NewHealthCheck(mqtt, modbus)
 	healthCheck.serve()
 	select {}
 }
