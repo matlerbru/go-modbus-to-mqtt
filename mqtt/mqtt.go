@@ -17,13 +17,29 @@ type Mqtt struct {
 	qos       uint8
 }
 
+var instances []*Mqtt
+
 func onConnect(client mqtt.Client) {
-	log.Println("INFO", "Connected to mqtt broker")
+	log.Println("INFO", "Connected to MQTT broker")
+
+	for _, instance := range instances {
+		if instance.client == client {
+			instance.metrics.setConnected(1)
+			break
+		}
+	}
 }
 
-func onDisconnect(client mqtt.Client, error error) {
-	log.Println("ERROR", "Disconnected from mqtt broker: %s", error.Error())
-	os.Exit(1)
+func onDisconnect(client mqtt.Client, err error) {
+	log.Println("ERROR", fmt.Sprintf("Disconnected from MQTT broker: %s", err.Error()))
+
+	for _, instance := range instances {
+		if instance.client == client {
+			instance.metrics.setConnected(0)
+			instance.Connect(0)
+			break
+		}
+	}
 }
 
 func NewMqtt(broker string, port uint16, qos uint8) *Mqtt {
@@ -35,16 +51,29 @@ func NewMqtt(broker string, port uint16, qos uint8) *Mqtt {
 
 	m := Mqtt{metrics: newMetrics(), qos: qos}
 	m.client = mqtt.NewClient(options)
+	m.metrics.setConnected(0)
+
+	instances = append(instances, &m)
+
 	return &m
 }
 
-func (m Mqtt) Connect() {
+func (m Mqtt) Connect(retries int) {
+	retry := 0
+	log.Println("INFO", "Connecting to MQTT broker")
 	for {
 		token := m.client.Connect()
 		res := token.WaitTimeout(1 * time.Second)
-		if res {
+		if res && token.Error() == nil {
 			break
 		}
+		retry++
+		log.Println("ERROR", fmt.Sprintf("Failed to connect to MQTT broker, retrying (%d)", retry))
+		if retries > 0 && retry >= retries {
+			log.Println("ERROR", fmt.Sprintf("Could not connect to MQTT broker after %d attempts, exiting", retry))
+			os.Exit(1)
+		}
+		time.Sleep(10 * time.Second)
 	}
 }
 
@@ -52,6 +81,7 @@ func (m Mqtt) Publish(topic string, message string) {
 	conf := configuration.GetConfiguration()
 	t := m.client.Publish(m.baseTopic+topic, conf.Mqtt.Qos, false, message)
 	go func() {
+
 		_ = t.Wait()
 		if t.Error() != nil {
 			log.Println("ERROR", t.Error())

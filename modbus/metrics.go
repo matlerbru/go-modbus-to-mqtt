@@ -15,10 +15,16 @@ type metrics struct {
 
 	overtimeLimit uint16
 	maxReadTime   uint16
+
+	connected prometheus.Gauge
 }
 
 func newMetrics(overtimeLimit uint16) *metrics {
 	return &metrics{
+		connected: promauto.NewGauge(prometheus.GaugeOpts{
+			Name: "modbus_to_mqtt_modbus_connected",
+			Help: "Indicates if the modbus client is connected",
+		}),
 		readCounter: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "modbus_to_mqtt_modbus_read_count",
 			Help: "Times modbus server is been read",
@@ -38,6 +44,14 @@ func newMetrics(overtimeLimit uint16) *metrics {
 		overtimeLimit: overtimeLimit,
 		maxReadTime:   0,
 	}
+}
+
+func (metrics *metrics) setConnected(value float64) {
+	if value < 0.0 || value > 1.0 {
+		log.Println("ERROR", "Invalid value for connected metric, must be 0 or 1")
+		return
+	}
+	metrics.connected.Set(value)
 }
 
 func (metrics *metrics) addRead(readTime uint16) {
